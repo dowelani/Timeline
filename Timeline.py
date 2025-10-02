@@ -240,44 +240,45 @@ elif page == "Timeline":
         # Show AgGrid
         grid_response = AgGrid(df, gridOptions=grid_options, height=400, fit_columns_on_grid_load=True)
 
-        # Get selected row safely
+        # Get selected rows safely
         selected = grid_response.get('selected_rows', [])
-
-        # Ensure it's a list, not DataFrame
+        
+        # Ensure it's a list for safe length checking
+        if selected is None:
+            selected = []
+        
         if isinstance(selected, pd.DataFrame):
             selected = selected.to_dict('records')
-
-        # Now safely check if anything is selected
+        
+        # Only proceed if there is at least one row selected
         if len(selected) > 0:
             selected_row = pd.DataFrame(selected).iloc[0]
-
-            # Prepare module info for display
+        
+            st.subheader(f"📄 Detailed View: {selected_row['Block/Module Name']}")
+        
+            # Module info with date-only formatting
             module_info = selected_row.to_dict()
-            
-            # Convert all datetime columns to date only for display
             for col in ["Program Start Date", "Program End Date", "Block Start Date", "Block End Date"]:
                 value = module_info.get(col)
                 if value is not None:
-                    # Convert to datetime first if not already
                     dt_value = pd.to_datetime(value, errors='coerce')
                     if pd.notna(dt_value):
-                        module_info[col] = dt_value.date()  # only keep date
-
-            st.subheader(f"📄 Detailed View: {selected_row['Block/Module Name']}")
+                        module_info[col] = dt_value.date()
             st.write("### Module Info")
             st.json(module_info)
-
+        
             # Show all dates in module duration
             start = pd.to_datetime(selected_row['Block Start Date'])
             end = pd.to_datetime(selected_row['Block End Date'])
             all_dates = pd.date_range(start, end)
             dates_df = pd.DataFrame({
-                "Date": all_dates.date,
+                "Date": [d.date() for d in all_dates],
                 "Day of Week": [d.strftime("%A") for d in all_dates]
             })
             st.write("### All Dates in Module Duration")
             st.dataframe(dates_df, use_container_width=True)
 
         st.success("✅ Timeline durations calculated and displayed in user-friendly units.")
+
 
     
